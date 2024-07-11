@@ -3,7 +3,7 @@ use rand::seq::IteratorRandom;
 use rand::thread_rng;
 use std::{fmt, iter};
 
-const ALPHA: &str = "ABCDEFGHIJKLMNOPQRSTUVXYZ";
+const ALPHA: &str = "ABCDEFGHIJKLMNOPQRSTUVXYZabcdefghijklmnopqrstuvxyz";
 
 #[derive(Clone)]
 pub struct Board {
@@ -57,7 +57,7 @@ impl Board {
     pub(crate) fn replace(&mut self) -> Result<()> {
         for i in 0..self.data.len() {
             if self.data[i] == '-' {
-                ALPHA
+                self.data[i] = ALPHA
                     .chars()
                     .choose(&mut thread_rng())
                     .context("Invalid index")?;
