@@ -1,4 +1,4 @@
-use crate::result::{IError, IResult};
+use anyhow::{bail, Context, Result};
 use rand::seq::SliceRandom;
 use rand::thread_rng;
 use std::collections::VecDeque;
@@ -15,10 +15,8 @@ pub struct WordPuzzle {
 }
 
 impl WordPuzzle {
-    pub(crate) fn new(words: Vec<String>, nrows: isize, ncols: isize) -> IResult<Self> {
-        let Ok(size) = usize::try_from(ncols * nrows) else {
-            return Err(IError::ConversionError);
-        };
+    pub(crate) fn new(words: Vec<String>, nrows: isize, ncols: isize) -> Result<Self> {
+        let size = usize::try_from(ncols * nrows).context("Invalid size")?;
         let positions: Vec<usize> = (0..size).collect();
         Ok(Self {
             nrows,
@@ -30,15 +28,13 @@ impl WordPuzzle {
         })
     }
 
-    pub(crate) fn search(&mut self) -> IResult<Board> {
+    pub(crate) fn search(&mut self) -> Result<Board> {
         let mut initial = Board::new(self.nrows, self.ncols)?;
         initial.fill()?;
 
         self.words.shuffle(&mut thread_rng());
 
-        let Some(word) = self.words.pop() else {
-            return Err(IError::BoundsError);
-        };
+        let word = self.words.pop().context("No words to search")?;
 
         let mut positions = self.positions.clone();
         let mut directions = self.directions.clone();
@@ -50,13 +46,13 @@ impl WordPuzzle {
 
         loop {
             if self.stack.is_empty() {
-                return Err(IError::BoundsError);
+                bail!("No solution found");
             }
 
             // The top of each of stack marks the next possible set of params to search for
             let Some((current_board, word, mut positions, mut directions)) = self.stack.pop()
             else {
-                return Err(IError::BoundsError);
+                bail!("No solution found");
             };
 
             let dir = match directions.pop() {
@@ -67,7 +63,7 @@ impl WordPuzzle {
                     let mut directions = self.directions.clone();
                     directions.shuffle(&mut thread_rng());
                     // Return next direction
-                    directions.pop().ok_or(IError::BoundsError)
+                    directions.pop().context("No directions left")
                 }
                 Some(dir) => Ok(dir),
             }?;
@@ -81,7 +77,7 @@ impl WordPuzzle {
                     self.words.push(word);
                     continue;
                 }
-                Some(&pos) => isize::try_from(pos).or(Err(IError::ConversionError)),
+                Some(&pos) => isize::try_from(pos).context("Invalid position"),
             }?;
 
             match try_word(&current_board, &word, pos, dir) {
@@ -109,7 +105,7 @@ impl WordPuzzle {
     }
 }
 
-fn try_word(board: &Board, word: &str, position: isize, direction: Dir) -> IResult<Board> {
+fn try_word(board: &Board, word: &str, position: isize, direction: Dir) -> Result<Board> {
     let mut grid = board.clone();
     let (dir_row, dir_col): (isize, isize) = direction.into();
     let (mut row, mut col) = grid.at(position);
@@ -120,12 +116,12 @@ fn try_word(board: &Board, word: &str, position: isize, direction: Dir) -> IResu
             break;
         };
 
-        if grid.index(row, col) == Ok('-') || grid.index(row, col) == Ok(letter) {
+        if grid.index(row, col)? == '-' || grid.index(row, col)? == letter {
             grid.set(row, col, letter)?;
             row += dir_row;
             col += dir_col;
         } else {
-            return Err(IError::BoundsError);
+            bail!("Failed");
         }
     }
 
@@ -133,5 +129,5 @@ fn try_word(board: &Board, word: &str, position: isize, direction: Dir) -> IResu
         return Ok(grid);
     }
 
-    Err(IError::BoundsError)
+    bail!("Failed");
 }

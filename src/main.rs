@@ -2,7 +2,6 @@
 
 mod board;
 mod dir;
-mod result;
 mod word_puzzle;
 use word_puzzle::WordPuzzle;
 

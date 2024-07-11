@@ -1,4 +1,4 @@
-use crate::result::{IError, IResult};
+use anyhow::{Context, Result};
 use rand::seq::IteratorRandom;
 use rand::thread_rng;
 use std::{fmt, iter};
@@ -13,10 +13,8 @@ pub struct Board {
     size: isize,
 }
 impl Board {
-    pub(crate) fn new(row: isize, cols: isize) -> IResult<Self> {
-        let Ok(size) = usize::try_from(row * cols) else {
-            return Err(IError::ConversionError);
-        };
+    pub(crate) fn new(row: isize, cols: isize) -> Result<Self> {
+        let size = usize::try_from(row * cols).context("Invalid size")?;
         Ok(Self {
             data: Vec::with_capacity(size),
             row,
@@ -32,11 +30,9 @@ impl Board {
         self.cols
     }
 
-    pub(crate) fn index(&self, row: isize, column: isize) -> IResult<char> {
-        let Ok(idx) = usize::try_from(row * self.cols + column) else {
-            return Err(IError::ConversionError);
-        };
-        Ok(self.data[idx])
+    pub(crate) fn index(&self, row: isize, column: isize) -> Result<char> {
+        let idx = usize::try_from(row * self.cols + column).context("Invalid index")?;
+        self.data.get(idx).copied().context("Invalid index")
     }
 
     #[must_use]
@@ -46,29 +42,25 @@ impl Board {
         (row, col)
     }
 
-    pub(crate) fn set(&mut self, row: isize, column: isize, val: char) -> IResult<()> {
-        let Ok(idx) = usize::try_from(row * self.cols + column) else {
-            return Err(IError::ConversionError);
-        };
-        self.data[idx] = val;
+    pub(crate) fn set(&mut self, row: isize, column: isize, val: char) -> Result<()> {
+        let idx = usize::try_from(row * self.cols + column).context("Invalid index")?;
+        *self.data.get_mut(idx).context("Invalid index")? = val;
         Ok(())
     }
 
-    pub(crate) fn fill(&mut self) -> IResult<()> {
-        let Ok(size) = usize::try_from(self.size) else {
-            return Err(IError::ConversionError);
-        };
+    pub(crate) fn fill(&mut self) -> Result<()> {
+        let size = usize::try_from(self.size).context("Invalid size")?;
         self.data.extend(iter::repeat('-').take(size));
         Ok(())
     }
 
-    pub(crate) fn replace(&mut self) -> IResult<()> {
+    pub(crate) fn replace(&mut self) -> Result<()> {
         for i in 0..self.data.len() {
             if self.data[i] == '-' {
                 ALPHA
                     .chars()
                     .choose(&mut thread_rng())
-                    .ok_or(IError::ConversionError)?;
+                    .context("Invalid index")?;
             }
         }
         Ok(())
