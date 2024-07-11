@@ -1,6 +1,8 @@
-use anyhow::{Context, Result};
+use crate::dir::Dir;
+use anyhow::{bail, Context, Result};
 use rand::seq::IteratorRandom;
 use rand::thread_rng;
+use std::collections::VecDeque;
 use std::{fmt, iter};
 
 const ALPHA: &str = "ABCDEFGHIJKLMNOPQRSTUVXYZabcdefghijklmnopqrstuvxyz";
@@ -54,7 +56,10 @@ impl Board {
         Ok(())
     }
 
-    pub(crate) fn replace(&mut self) -> Result<()> {
+    /// # Errors
+    ///
+    /// shoudn't fail
+    pub fn replace(&mut self) -> Result<()> {
         for i in 0..self.data.len() {
             if self.data[i] == '-' {
                 self.data[i] = ALPHA
@@ -64,6 +69,32 @@ impl Board {
             }
         }
         Ok(())
+    }
+    pub(crate) fn try_word(&self, word: &str, position: isize, direction: Dir) -> Result<Self> {
+        let mut grid = self.clone();
+        let (dir_row, dir_col): (isize, isize) = direction.into();
+        let (mut row, mut col) = grid.at(position);
+        let mut chars: VecDeque<char> = word.chars().collect();
+
+        while (0 <= row && row < grid.row() - 1) && (0 <= col && col < grid.cols()) {
+            let Some(letter) = chars.pop_front() else {
+                break;
+            };
+
+            if grid.index(row, col)? == '-' || grid.index(row, col)? == letter {
+                grid.set(row, col, letter)?;
+                row += dir_row;
+                col += dir_col;
+            } else {
+                bail!("Failed");
+            }
+        }
+
+        if chars.is_empty() {
+            Ok(grid)
+        } else {
+            bail!("Failed");
+        }
     }
 }
 

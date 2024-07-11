@@ -2,10 +2,7 @@
 #![warn(clippy::all, clippy::pedantic, clippy::nursery, clippy::perf)] // be strict
 
 use anyhow::{bail, Context};
-mod board;
-mod dir;
-mod word_puzzle;
-use word_puzzle::WordPuzzle;
+use engine::word_puzzle::WordPuzzle;
 
 use std::env;
 

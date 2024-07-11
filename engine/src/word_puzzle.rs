@@ -1,7 +1,6 @@
 use anyhow::{bail, Context, Result};
 use rand::seq::SliceRandom;
 use rand::thread_rng;
-use std::collections::VecDeque;
 
 use crate::{board::Board, dir::Dir};
 
@@ -15,7 +14,9 @@ pub struct WordPuzzle {
 }
 
 impl WordPuzzle {
-    pub(crate) fn new(words: Vec<String>, nrows: isize, ncols: isize) -> Result<Self> {
+    /// # Errors
+    /// fails if ncols*nrows is not a valid usize
+    pub fn new(words: Vec<String>, nrows: isize, ncols: isize) -> Result<Self> {
         let size = usize::try_from(ncols * nrows).context("Invalid size")?;
         let positions: Vec<usize> = (0..size).collect();
         Ok(Self {
@@ -27,8 +28,9 @@ impl WordPuzzle {
             positions,
         })
     }
-
-    pub(crate) fn search(&mut self) -> Result<Board> {
+    /// # Errors
+    /// fails if no words are left to search while generating
+    pub fn search(&mut self) -> Result<Board> {
         let mut initial = Board::new(self.nrows, self.ncols)?;
         initial.fill()?;
 
@@ -80,7 +82,7 @@ impl WordPuzzle {
                 Some(&pos) => isize::try_from(pos).context("Invalid position"),
             }?;
 
-            match try_word(&current_board, &word, pos, dir) {
+            match current_board.try_word(&word, pos, dir) {
                 Ok(board) => {
                     let word = match self.words.pop() {
                         None => return Ok(board),
@@ -103,31 +105,4 @@ impl WordPuzzle {
             }
         }
     }
-}
-
-fn try_word(board: &Board, word: &str, position: isize, direction: Dir) -> Result<Board> {
-    let mut grid = board.clone();
-    let (dir_row, dir_col): (isize, isize) = direction.into();
-    let (mut row, mut col) = grid.at(position);
-    let mut chars: VecDeque<char> = word.chars().collect();
-
-    while (0 <= row && row < grid.row() - 1) && (0 <= col && col < grid.cols()) {
-        let Some(letter) = chars.pop_front() else {
-            break;
-        };
-
-        if grid.index(row, col)? == '-' || grid.index(row, col)? == letter {
-            grid.set(row, col, letter)?;
-            row += dir_row;
-            col += dir_col;
-        } else {
-            bail!("Failed");
-        }
-    }
-
-    if chars.is_empty() {
-        return Ok(grid);
-    }
-
-    bail!("Failed");
 }
