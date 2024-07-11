@@ -1,9 +1,8 @@
 #![warn(clippy::all, clippy::pedantic, clippy::nursery, clippy::perf)] // be strict
-#![allow(clippy::cast_sign_loss)] // to allow casting isize to usize
-                                  //
 
 mod board;
 mod dir;
+mod result;
 mod word_puzzle;
 use word_puzzle::WordPuzzle;
 
@@ -20,7 +19,10 @@ fn main() {
     let rows = board[1].parse::<isize>().unwrap();
     let cols = board[2].parse::<isize>().unwrap();
 
-    if let Ok(mut board) = WordPuzzle::new(words.to_vec(), rows, cols).search() {
+    if let Ok(mut board) = WordPuzzle::new(words.to_vec(), rows, cols)
+        .unwrap()
+        .search()
+    {
         let _ = board.replace();
         println!("{board}");
     } else {
