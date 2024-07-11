@@ -1,3 +1,4 @@
+#![deny(clippy::unwrap_used, clippy::expect_used)]
 #![warn(clippy::all, clippy::pedantic, clippy::nursery, clippy::perf)] // be strict
 
 use anyhow::{bail, Context};
