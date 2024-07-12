@@ -1,8 +1,9 @@
+use anyhow::{Context, Result};
 use rand::seq::IteratorRandom;
 use rand::thread_rng;
 use std::{fmt, iter};
 
-const ALPHA: &str = "ABCDEFGHIJKLMNOPQRSTUVXYZ";
+const ALPHA: &str = "ABCDEFGHIJKLMNOPQRSTUVXYZabcdefghijklmnopqrstuvxyz";
 
 #[derive(Clone)]
 pub struct Board {
@@ -12,13 +13,14 @@ pub struct Board {
     size: isize,
 }
 impl Board {
-    pub(crate) fn new(row: isize, cols: isize) -> Self {
-        Self {
-            data: Vec::with_capacity((row * cols) as usize),
+    pub(crate) fn new(row: isize, cols: isize) -> Result<Self> {
+        let size = usize::try_from(row * cols).context("Invalid size")?;
+        Ok(Self {
+            data: Vec::with_capacity(size),
             row,
             cols,
             size: row * cols,
-        }
+        })
     }
 
     pub(crate) const fn row(&self) -> isize {
@@ -28,9 +30,9 @@ impl Board {
         self.cols
     }
 
-    #[must_use]
-    pub(crate) fn index(&self, row: isize, column: isize) -> char {
-        self.data[(row * self.cols + column) as usize]
+    pub(crate) fn index(&self, row: isize, column: isize) -> Result<char> {
+        let idx = usize::try_from(row * self.cols + column).context("Invalid index")?;
+        self.data.get(idx).copied().context("Invalid index")
     }
 
     #[must_use]
@@ -40,18 +42,25 @@ impl Board {
         (row, col)
     }
 
-    pub(crate) fn set(&mut self, row: isize, column: isize, val: char) {
-        self.data[(row * self.cols + column) as usize] = val;
+    pub(crate) fn set(&mut self, row: isize, column: isize, val: char) -> Result<()> {
+        let idx = usize::try_from(row * self.cols + column).context("Invalid index")?;
+        *self.data.get_mut(idx).context("Invalid index")? = val;
+        Ok(())
     }
 
-    pub(crate) fn fill(&mut self) {
-        self.data.extend(iter::repeat('-').take(self.size as usize));
+    pub(crate) fn fill(&mut self) -> Result<()> {
+        let size = usize::try_from(self.size).context("Invalid size")?;
+        self.data.extend(iter::repeat('-').take(size));
+        Ok(())
     }
 
-    pub(crate) fn replace(&mut self) -> Result<(), ()> {
+    pub(crate) fn replace(&mut self) -> Result<()> {
         for i in 0..self.data.len() {
             if self.data[i] == '-' {
-                ALPHA.chars().choose(&mut thread_rng()).ok_or(())?;
+                self.data[i] = ALPHA
+                    .chars()
+                    .choose(&mut thread_rng())
+                    .context("Invalid index")?;
             }
         }
         Ok(())
@@ -60,17 +69,20 @@ impl Board {
 
 impl fmt::Display for Board {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        writeln!(f, "-{}-", "-".repeat((self.cols * 3) as usize))?;
+        let Ok(cols) = usize::try_from(self.cols()) else {
+            return Err(std::fmt::Error);
+        };
+        writeln!(f, "-{}-", "-".repeat(cols * 3))?;
         for (index, value) in self.data.iter().enumerate() {
             if index == 0 {
                 write!(f, "|")?;
             }
 
-            if index != 0 && index % self.cols as usize == 0 {
+            if index != 0 && index % cols == 0 {
                 write!(f, "|\n|")?;
             }
             write!(f, " {value} ")?;
         }
-        write!(f, "|\n-{}-\n", "-".repeat((self.cols * 3) as usize))
+        write!(f, "|\n-{}-\n", "-".repeat(cols * 3))
     }
 }
