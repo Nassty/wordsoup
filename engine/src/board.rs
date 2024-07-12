@@ -7,7 +7,7 @@ use std::{fmt, iter};
 
 const ALPHA: &str = "ABCDEFGHIJKLMNOPQRSTUVXYZabcdefghijklmnopqrstuvxyz";
 
-#[derive(Clone)]
+#[derive(Clone, PartialEq, Eq, Default, Debug)]
 pub struct Board {
     data: Vec<char>,
     row: isize,
@@ -25,20 +25,28 @@ impl Board {
         })
     }
 
-    pub(crate) const fn row(&self) -> isize {
+    #[must_use]
+    pub const fn row(&self) -> isize {
         self.row
     }
-    pub(crate) const fn cols(&self) -> isize {
+    #[must_use]
+    pub const fn cols(&self) -> isize {
         self.cols
     }
+    #[must_use]
+    pub const fn data(&self) -> &Vec<char> {
+        &self.data
+    }
 
-    pub(crate) fn index(&self, row: isize, column: isize) -> Result<char> {
+    /// # Errors
+    /// if size is invalid
+    pub fn index(&self, row: isize, column: isize) -> Result<char> {
         let idx = usize::try_from(row * self.cols + column).context("Invalid index")?;
         self.data.get(idx).copied().context("Invalid index")
     }
 
     #[must_use]
-    pub(crate) const fn at(&self, position: isize) -> (isize, isize) {
+    pub const fn at(&self, position: isize) -> (isize, isize) {
         let row = position / self.cols;
         let col = position % self.cols;
         (row, col)

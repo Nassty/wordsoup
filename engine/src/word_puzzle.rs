@@ -4,6 +4,7 @@ use rand::thread_rng;
 
 use crate::{board::Board, dir::Dir};
 
+#[derive(PartialEq)]
 pub struct WordPuzzle {
     nrows: isize,
     ncols: isize,
